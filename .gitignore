@@ -1,0 +1,132 @@
+
+## **.gitignore**
+
+```gitignore
+# General
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.temp
+*.swp
+*~
+\#*#
+.#*
+.env
+.env.local
+.env.*.local
+
+# Docker
+docker-compose.override.yml
+docker-data/
+docker-volumes/
+
+# Elastic/Elasticsearch data
+**/elasticsearch/data/
+**/opensearch/data/
+
+# Logs
+logs/
+*.log
+suricata/logs/
+wazuh/logs/
+elasticsearch/logs/
+
+# PCAP files
+*.pcap
+*.pcapng
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+._*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Elastic/Kibana
+.kibana/
+elasticsearch/plugins/
+kibana/plugins/
+
+# Wazuh
+wazuh/queue/
+wazuh/var/
+wazuh/tmp/
+
+# Suricata
+suricata/rules/*.rules
+!suricata/config/rules/local.rules
+suricata/eve.json
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Virtual Machines
+*.vmdk
+*.vdi
+*.vmx
+*.vmxf
+*.vmsd
+*.nvram
+
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Certificates and keys
+*.key
+*.pem
+*.crt
+*.csr
+*.cer
+*.der
+*.pfx
+
+# Configurations with secrets
+**/*-secrets.yaml
+**/*-secrets.yml
+**/*-secrets.json
+
+# Archives
+*.zip
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+
+# Temporary build files
+build/
+dist/
+*.egg-info/
+
+# Testing
+.coverage
+.pytest_cache/
+test-results/
+
+# Project-specific
+attack-simulation/pcaps/*.pcap
+!attack-simulation/pcaps/sample_traffic.pcap

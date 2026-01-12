@@ -1,0 +1,252 @@
+%YAML 1.1
+---
+# Suricata configuration for Mini-SOC Platform
+
+# Set the default rule path
+default-rule-path: /etc/suricata/rules
+rule-files:
+  - local.rules
+  - suricata.rules
+
+# Variables
+vars:
+  address-groups:
+    HOME_NET: "[192.168.0.0/16,10.0.0.0/8,172.16.0.0/12]"
+    EXTERNAL_NET: "!$HOME_NET"
+    HTTP_SERVERS: "$HOME_NET"
+    SMTP_SERVERS: "$HOME_NET"
+    SQL_SERVERS: "$HOME_NET"
+    DNS_SERVERS: "$HOME_NET"
+    TELNET_SERVERS: "$HOME_NET"
+    AIM_SERVERS: "$EXTERNAL_NET"
+    DNP3_SERVER: "$HOME_NET"
+    DNP3_CLIENT: "$HOME_NET"
+    MODBUS_CLIENT: "$HOME_NET"
+    MODBUS_SERVER: "$HOME_NET"
+    ENIP_CLIENT: "$HOME_NET"
+    ENIP_SERVER: "$HOME_NET"
+  
+  port-groups:
+    HTTP_PORTS: "80"
+    SHELLCODE_PORTS: "!80"
+    ORACLE_PORTS: 1521
+    SSH_PORTS: 22
+    DNP3_PORTS: 20000
+    MODBUS_PORTS: 502
+
+# AF_PACKET configuration for high performance
+af-packet:
+  - interface: eth0
+    cluster-id: 99
+    cluster-type: cluster_flow
+    defrag: yes
+    use-mmap: yes
+    ring-size: 65536
+    block-size: 32768
+    threads: 2
+    tpacket-v3: yes
+    checksum-checks: no
+
+# PF_RING configuration (alternative)
+# pfring:
+#   - interface: eth0
+#     threads: 2
+#     cluster-id: 99
+#     cluster-type: cluster_flow
+
+# Set the default packet size
+max-pending-packets: 1024
+
+# Runmode
+runmode: workers
+
+# Host specific policies
+host-mode: auto
+host-os-policy:
+  windows: [0.0.0.0/0]
+  bsd: []
+  bsd-right: []
+  old-linux: []
+  linux: [0.0.0.0/0]
+  old-solaris: []
+  solaris: [::/0]
+  hpux10: []
+  hpux11: []
+  irix: []
+  macos: []
+  vista: []
+  windows2k3: []
+
+# Logging configuration
+logging:
+  # Default log directory
+  default-log-format: "[%i] %d - %m"
+  
+  # Eve JSON log output (recommended for Elasticsearch)
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json
+      types:
+        - alert:
+            payload: yes
+            payload-buffer-size: 4kb
+            payload-printable: yes
+            packet: yes
+            http: yes
+            tls: yes
+            ssh: yes
+            smtp: yes
+            dns: yes
+        - http:
+            extended: yes
+        - dns:
+            query: yes
+            answer: yes
+        - tls:
+            extended: yes
+        - files:
+            force-magic: yes
+        - smtp:
+            extended-log: yes
+            include-raw: yes
+        - ssh:
+            extended: yes
+        - flow
+        - netflow
+  
+  # Fast alert log (legacy format)
+  - fast:
+      enabled: yes
+      filename: fast.log
+      format: "%t - %i %s %d %a %p %m"
+  
+  # Stats log
+  - stats:
+      enabled: yes
+      filename: stats.log
+      interval: 30
+
+# Output filters
+outputs:
+  # Drop alerts for certain flows
+  - drop:
+      alerts: yes
+      flows: all
+  
+  # HTTP log
+  - http-log:
+      enabled: no
+      filename: http.log
+  
+  # TLS log
+  - tls-log:
+      enabled: no
+      filename: tls.log
+  
+  # SSH log
+  - ssh-log:
+      enabled: no
+      filename: ssh.log
+  
+  # SMTP log
+  - smtp-log:
+      enabled: no
+      filename: smtp.log
+  
+  # DNS log
+  - dns-log:
+      enabled: no
+      filename: dns.log
+
+# IP Reputation (optional)
+reputation-categories-file: /etc/suricata/iprep/categories.txt
+default-reputation-path: /etc/suricata/iprep
+reputation-files:
+  - iprep.list
+
+# Rule management
+rule-management:
+  autofp: true
+  default-rule-state: enabled
+  checksum-validation: no
+  
+classification-file: /etc/suricata/classification.config
+reference-config-file: /etc/suricata/reference.config
+
+# Performance tuning
+stream:
+  memcap: 64mb
+  checksum-validation: no
+  prealloc-sessions: 65536
+
+detect:
+  profile: medium
+  custom-values:
+    toclient-groups: 3
+    toserver-groups: 25
+  sgh-mpm-context: auto
+  inspection-recursion-limit: 3000
+
+app-layer:
+  protocols:
+    tls:
+      enabled: yes
+      detection-ports:
+        dp: 443
+    http:
+      enabled: yes
+    ssh:
+      enabled: yes
+    smtp:
+      enabled: yes
+    imap:
+      enabled: detection-only
+    msn:
+      enabled: detection-only
+    smb:
+      enabled: detection-only
+      detection-ports:
+        dp: 445
+    dns:
+      enabled: yes
+      detection-ports:
+        dp: 53
+    ike:
+      enabled: yes
+    ftp:
+      enabled: no
+    dhcp:
+      enabled: yes
+    nfs:
+      enabled: no
+    snmp:
+      enabled: yes
+    rfb:
+      enabled: yes
+    rdp:
+      enabled: yes
+
+# Threading
+threading:
+  set-cpu-affinity: no
+  detect-thread-ratio: 1.0
+
+# Profiling
+profiling:
+  rules:
+    enabled: yes
+    filename: rule_perf.log
+    append: yes
+
+# Advanced settings
+pcre:
+  match-limit: 3500
+  match-limit-recursion: 1500
+
+# Lua scripting (optional)
+lua:
+  scripts: /etc/suricata/lua-output.lua
+
+# Magic file for file identification
+magic-file: /usr/share/file/magic.mgc

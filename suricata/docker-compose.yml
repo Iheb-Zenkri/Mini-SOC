@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  suricata:
+    build: .
+    container_name: suricata-nids
+    restart: unless-stopped
+    network_mode: host  # Required for network traffic capture
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_NICE
+      - SYS_PTRACE
+    volumes:
+      - ./config/suricata.yaml:/etc/suricata/suricata.yaml:ro
+      - ./config/rules/local.rules:/etc/suricata/rules/local.rules:ro
+      - suricata-logs:/var/log/suricata
+      - suricata-rules:/etc/suricata/rules
+    environment:
+      - SURICATA_INTERFACE=eth0
+      - SURICATA_CONFIG=/etc/suricata/suricata.yaml
+      - SURICATA_OPTIONS=-v
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "suricatasc", "-c", "version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Filebeat for log shipping to Elasticsearch
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.10.0
+    container_name: suricata-filebeat
+    restart: unless-stopped
+    depends_on:
+      - suricata
+    volumes:
+      - ./config/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - suricata-logs:/var/log/suricata:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: filebeat -e -strict.perms=false
+
+volumes:
+  suricata-logs:
+  suricata-rules:

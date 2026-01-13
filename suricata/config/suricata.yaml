@@ -1,8 +1,9 @@
 %YAML 1.1
 ---
 # Suricata configuration for Mini-SOC Platform
+# Refactored for dynamic runtime HOME_NET update in containers
 
-# Set the default rule path
+# Default rule path
 default-rule-path: /etc/suricata/rules
 rule-files:
   - local.rules
@@ -11,7 +12,7 @@ rule-files:
 # Variables
 vars:
   address-groups:
-    HOME_NET: "[192.168.0.0/16,10.0.0.0/8,172.16.0.0/12]"
+    HOME_NET: "[192.168.0.0/24]"  # This will be replaced dynamically at container startup
     EXTERNAL_NET: "!$HOME_NET"
     HTTP_SERVERS: "$HOME_NET"
     SMTP_SERVERS: "$HOME_NET"
@@ -25,7 +26,7 @@ vars:
     MODBUS_SERVER: "$HOME_NET"
     ENIP_CLIENT: "$HOME_NET"
     ENIP_SERVER: "$HOME_NET"
-  
+
   port-groups:
     HTTP_PORTS: "80"
     SHELLCODE_PORTS: "!80"
@@ -34,7 +35,7 @@ vars:
     DNP3_PORTS: 20000
     MODBUS_PORTS: 502
 
-# AF_PACKET configuration for high performance
+# AF_PACKET configuration
 af-packet:
   - interface: eth0
     cluster-id: 99
@@ -47,134 +48,79 @@ af-packet:
     tpacket-v3: yes
     checksum-checks: no
 
-# PF_RING configuration (alternative)
-# pfring:
-#   - interface: eth0
-#     threads: 2
-#     cluster-id: 99
-#     cluster-type: cluster_flow
-
-# Set the default packet size
-max-pending-packets: 1024
-
-# Runmode
+# Runmode and performance
 runmode: workers
-
-# Host specific policies
+max-pending-packets: 1024
 host-mode: auto
 host-os-policy:
-  windows: [0.0.0.0/0]
-  bsd: []
-  bsd-right: []
-  old-linux: []
-  linux: [0.0.0.0/0]
-  old-solaris: []
-  solaris: [::/0]
-  hpux10: []
-  hpux11: []
-  irix: []
-  macos: []
-  vista: []
-  windows2k3: []
+  windows: ["0.0.0.0/0"]
+  linux: ["0.0.0.0/0"]
+  solaris: ["::/0"]
 
-# Logging configuration
+# Logging
 logging:
-  # Default log directory
   default-log-format: "[%i] %d - %m"
-  
-  # Eve JSON log output (recommended for Elasticsearch)
+  outputs:
+    - console:
+        enabled: yes
+
+outputs:
+  # Fast alert log (human readable)
+  - fast:
+      enabled: yes
+      filename: /var/log/suricata/fast.log
+      append: yes
+
+  # EVE JSON (for SOC / SIEM / Filebeat)
   - eve-log:
       enabled: yes
       filetype: regular
-      filename: eve.json
+      filename: /var/log/suricata/eve.json
+      community-id: true
+      xff:
+        enabled: yes
+        mode: extra-data
       types:
-        - alert:
-            payload: yes
-            payload-buffer-size: 4kb
-            payload-printable: yes
-            packet: yes
-            http: yes
-            tls: yes
-            ssh: yes
-            smtp: yes
-            dns: yes
-        - http:
-            extended: yes
-        - dns:
-            query: yes
-            answer: yes
-        - tls:
-            extended: yes
-        - files:
-            force-magic: yes
-        - smtp:
-            extended-log: yes
-            include-raw: yes
-        - ssh:
-            extended: yes
+        - alert
+        - dns
+        - http
+        - tls
+        - ssh
         - flow
-        - netflow
-  
-  # Fast alert log (legacy format)
-  - fast:
-      enabled: yes
-      filename: fast.log
-      format: "%t - %i %s %d %a %p %m"
-  
-  # Stats log
-  - stats:
-      enabled: yes
-      filename: stats.log
-      interval: 30
+        - anomaly
+        - drop
 
-# Output filters
-outputs:
-  # Drop alerts for certain flows
-  - drop:
-      alerts: yes
-      flows: all
-  
-  # HTTP log
+  # HTTP log (optional but useful)
   - http-log:
-      enabled: no
-      filename: http.log
-  
-  # TLS log
-  - tls-log:
-      enabled: no
-      filename: tls.log
-  
-  # SSH log
-  - ssh-log:
-      enabled: no
-      filename: ssh.log
-  
-  # SMTP log
-  - smtp-log:
-      enabled: no
-      filename: smtp.log
-  
+      enabled: yes
+      filename: /var/log/suricata/http.log
+
   # DNS log
   - dns-log:
-      enabled: no
-      filename: dns.log
+      enabled: yes
+      filename: /var/log/suricata/dns.log
 
-# IP Reputation (optional)
-reputation-categories-file: /etc/suricata/iprep/categories.txt
-default-reputation-path: /etc/suricata/iprep
-reputation-files:
-  - iprep.list
+  # TLS log
+  - tls-log:
+      enabled: yes
+      filename: /var/log/suricata/tls.log
+
+# Reputation files
+# reputation-categories-file: /etc/suricata/iprep/categories.txt
+# default-reputation-path: /etc/suricata/iprep
+# reputation-files:
+#   - iprep.list
 
 # Rule management
 rule-management:
   autofp: true
   default-rule-state: enabled
   checksum-validation: no
-  
+
 classification-file: /etc/suricata/classification.config
 reference-config-file: /etc/suricata/reference.config
 
-# Performance tuning
+# Stream and detection settings
 stream:
   memcap: 64mb
   checksum-validation: no
@@ -188,6 +134,7 @@ detect:
   sgh-mpm-context: auto
   inspection-recursion-limit: 3000
 
+# Application layer protocols
 app-layer:
   protocols:
     tls:
@@ -201,8 +148,6 @@ app-layer:
     smtp:
       enabled: yes
     imap:
-      enabled: detection-only
-    msn:
       enabled: detection-only
     smb:
       enabled: detection-only
@@ -218,8 +163,6 @@ app-layer:
       enabled: no
     dhcp:
       enabled: yes
-    nfs:
-      enabled: no
     snmp:
       enabled: yes
     rfb:
@@ -244,9 +187,9 @@ pcre:
   match-limit: 3500
   match-limit-recursion: 1500
 
-# Lua scripting (optional)
+# Lua scripting
 lua:
   scripts: /etc/suricata/lua-output.lua
 
-# Magic file for file identification
+# Magic file
 magic-file: /usr/share/file/magic.mgc

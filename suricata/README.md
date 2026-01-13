@@ -18,7 +18,7 @@ This module deploys Suricata as a Network Intrusion Detection System (NIDS) for 
 
 ```bash
 # Build and run Suricata container
-docker-compose -f docker-compose.suricata.yml up -d
+docker-compose -f docker-compose.yml up --build -d
 
 # View logs
 docker logs suricata -f
@@ -26,8 +26,8 @@ docker logs suricata -f
 ### Manual Installation
 ```bash
 # Run installation script
-chmod +x install_suricata.sh
-sudo ./install_suricata.sh
+chmod +x scripts/install_suricata.sh
+sudo ./scripts/install_suricata.sh
 
 # Start Suricata
 sudo systemctl start suricata

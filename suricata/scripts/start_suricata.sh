@@ -6,29 +6,46 @@ set -e
 
 # Default values
 INTERFACE=${SURICATA_INTERFACE:-eth0}
-CONFIG_FILE=${SURICATA_CONFIG:-/etc/suricata/suricata.yaml}
+CONFIG_FILE=/etc/suricata/suricata.yaml
+TEMPLATE=/etc/suricata/suricata.yaml.tpl
+LOG_DIR=/var/log/suricata
 OPTIONS=${SURICATA_OPTIONS:-""}
-LOG_DIR=${SURICATA_LOG_DIR:-/var/log/suricata}
-RULES_DIR=${SURICATA_RULES_DIR:-/etc/suricata/rules}
+UPDATE_RULES=${SURICATA_UPDATE_RULES:-"false"}
+SET_CAPABILITIES=${SURICATA_SET_CAPABILITIES:-"false"}
 
 # Create necessary directories
 mkdir -p "$LOG_DIR"
-mkdir -p "$RULES_DIR"
+chown -R root:root "$LOG_DIR"
+chmod -R 755 "$LOG_DIR"
 
-# Set ownership
-chown -R suricata:suricata "$LOG_DIR" || true
-chown -R suricata:suricata "$RULES_DIR" || true
+
+# Copy template to runtime config
+if [ -f "$TEMPLATE" ]; then
+    cp "$TEMPLATE" "$CONFIG_FILE"
+else
+    echo "Template not found: $TEMPLATE"
+    exit 1
+fi
 
 # Update HOME_NET if environment variable is set
 if [ -n "$HOME_NET" ]; then
     echo "Updating HOME_NET to: $HOME_NET"
-    sed -i "s/HOME_NET: .*/HOME_NET: \"$HOME_NET\"/g" "$CONFIG_FILE"
+    sed -i "s|^HOME_NET:.*|HOME_NET: \"$HOME_NET\"|g" "$CONFIG_FILE"
 fi
 
 # Update interface in configuration if different
 if grep -q "interface: eth0" "$CONFIG_FILE" && [ "$INTERFACE" != "eth0" ]; then
     echo "Updating interface from eth0 to $INTERFACE"
     sed -i "s/interface: eth0/interface: $INTERFACE/g" "$CONFIG_FILE"
+fi
+
+# Update rules if needed
+mkdir -p /etc/suricata/rules
+touch /etc/suricata/rules/local.rules
+touch /etc/suricata/rules/suricata.rules
+if [ "$UPDATE_RULES" = "true" ] || [ "$UPDATE_RULES" = "1" ]; then
+    echo "Updating Suricata rules..."
+    suricata-update
 fi
 
 # Test configuration before starting
@@ -40,11 +57,7 @@ else
     exit 1
 fi
 
-# Update rules if needed
-if [ "$UPDATE_RULES" = "true" ] || [ "$UPDATE_RULES" = "1" ]; then
-    echo "Updating Suricata rules..."
-    suricata-update
-fi
+
 
 # Set capabilities for the binary (for packet capture)
 if [ "$SET_CAPABILITIES" = "true" ] || [ "$SET_CAPABILITIES" = "1" ]; then

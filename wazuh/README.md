@@ -1,6 +1,6 @@
 # Wazuh Service Setup Guide
 
-This guide provides instructions for deploying and managing your Wazuh service using either manual installation or Docker Compose.
+This guide provides instructions for deploying and managing your Wazuh manager using either manual installation or Docker Compose.
 
 ## Overview
 
@@ -55,13 +55,6 @@ docker compose down
 docker compose down -v
 ```
 
-## Accessing Wazuh
-
-After installation, access the Wazuh dashboard:
-
-- **URL**: `https://localhost` or `https://<your-server-ip>`
-- **Default credentials**: Check the installation output or docker compose logs for credentials
-
 ## Installing a Wazuh Agent (Optional)
 
 ```bash
@@ -90,30 +83,6 @@ docker compose up -d
 # Check service status
 docker compose ps
 ```
-
-### Service Health Check
-
-```bash
-# Check if services are running
-curl -k https://localhost
-
-# View container resource usage
-docker stats
-```
-
-## Troubleshooting
-
-- **Port conflicts**: Ensure ports 443, 1514, 1515, and 55000 are available
-- **Permission issues**: Run installation commands with sudo
-- **Container issues**: Check logs with `docker compose logs`
-- **Memory issues**: Ensure adequate system resources are available
-
-## Next Steps
-
-1. Change default credentials immediately after first login
-2. Configure agents to connect to your Wazuh manager
-3. Review and customize security rules
-4. Set up alerting and notification channels
 
 ## Documentation
 

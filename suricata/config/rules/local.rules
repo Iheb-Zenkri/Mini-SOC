@@ -1,0 +1,35 @@
+# Mini-SOC Platform - Custom Suricata Rules
+# These are custom rules for specific detection needs
+
+# SSH Brute Force Detection
+alert tcp any any -> $HOME_NET 22 (msg:"SSH Brute Force Attempt"; flow:to_server,established; content:"SSH-"; depth:4; threshold:type threshold, track by_src, count 5, seconds 60; sid:1000001; rev:1;)
+
+# Web Attack: SQL Injection Attempt
+alert tcp any any -> $HOME_NET $HTTP_PORTS (msg:"Web Attack: SQL Injection Detected"; flow:to_server,established; content:"union"; nocase; content:"select"; nocase; distance:0; within:100; sid:1000002; rev:1;)
+
+# Suspicious PowerShell Execution
+alert tcp any any -> $HOME_NET any (msg:"Suspicious PowerShell Execution"; flow:to_server,established; content:"powershell"; nocase; content:"-EncodedCommand"; nocase; distance:0; within:50; sid:1000003; rev:1;)
+
+# Port Scan Detection
+alert ip any any -> $HOME_NET any (msg:"Potential Port Scan"; flags:S,12; threshold:type both, track by_src, count 20, seconds 30; sid:1000004; rev:1;)
+
+# Cryptojacking/Miner Detection
+alert tcp any any -> $HOME_NET any (msg:"Potential Cryptojacking Traffic - Stratum Protocol"; content:"mining.subscribe"; depth:20; sid:1000005; rev:1;)
+
+# Malware C2 Communication Pattern
+alert tcp any any -> $EXTERNAL_NET any (msg:"Potential Malware C2 - Long Connection with Low Data"; flow:to_server,established; flowbits:set,low_data_conn; byte_test:1,<,100,0,relative; sid:1000006; rev:1;)
+
+# DNS Tunneling Detection
+alert udp any any -> $DNS_SERVERS 53 (msg:"Potential DNS Tunneling - Large Query"; dns.query; byte_test:1,>,63,0,relative; sid:1000007; rev:1;)
+
+# IoT Device Exploitation Attempt
+alert tcp any any -> $HOME_NET 7547 (msg:"IoT Exploit - TR-069 Protocol Abuse"; content:"POST"; http_method; content:"/UD/act"; http_uri; sid:1000008; rev:1;)
+
+# Ransomware Indicator - SMB Enumeration
+alert tcp any any -> $HOME_NET 445 (msg:"Ransomware Behavior - SMB Share Enumeration"; flow:to_server,established; content:"|00 00 00 90|"; depth:4; content:"Srvsvc"; within:10; distance:20; sid:1000009; rev:1;)
+
+# Education/Test Rule - Always Alert on Test Traffic
+alert icmp any any -> $HOME_NET any (msg:"TEST RULE: ICMP Ping Detected"; icode:0; itype:8; sid:1000010; rev:1; classtype:icmp-event;)
+
+# Custom rules can be added below
+# Format: alert protocol src port -> dst port (msg:"description"; detection content; sid:number; rev:version;)

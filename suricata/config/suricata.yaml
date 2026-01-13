@@ -1,0 +1,195 @@
+%YAML 1.1
+---
+# Suricata configuration for Mini-SOC Platform
+# Refactored for dynamic runtime HOME_NET update in containers
+
+# Default rule path
+default-rule-path: /etc/suricata/rules
+rule-files:
+  - local.rules
+  - suricata.rules
+
+# Variables
+vars:
+  address-groups:
+    HOME_NET: "[192.168.0.0/24]"  # This will be replaced dynamically at container startup
+    EXTERNAL_NET: "!$HOME_NET"
+    HTTP_SERVERS: "$HOME_NET"
+    SMTP_SERVERS: "$HOME_NET"
+    SQL_SERVERS: "$HOME_NET"
+    DNS_SERVERS: "$HOME_NET"
+    TELNET_SERVERS: "$HOME_NET"
+    AIM_SERVERS: "$EXTERNAL_NET"
+    DNP3_SERVER: "$HOME_NET"
+    DNP3_CLIENT: "$HOME_NET"
+    MODBUS_CLIENT: "$HOME_NET"
+    MODBUS_SERVER: "$HOME_NET"
+    ENIP_CLIENT: "$HOME_NET"
+    ENIP_SERVER: "$HOME_NET"
+
+  port-groups:
+    HTTP_PORTS: "80"
+    SHELLCODE_PORTS: "!80"
+    ORACLE_PORTS: 1521
+    SSH_PORTS: 22
+    DNP3_PORTS: 20000
+    MODBUS_PORTS: 502
+
+# AF_PACKET configuration
+af-packet:
+  - interface: eth0
+    cluster-id: 99
+    cluster-type: cluster_flow
+    defrag: yes
+    use-mmap: yes
+    ring-size: 65536
+    block-size: 32768
+    threads: 2
+    tpacket-v3: yes
+    checksum-checks: no
+
+# Runmode and performance
+runmode: workers
+max-pending-packets: 1024
+host-mode: auto
+host-os-policy:
+  windows: ["0.0.0.0/0"]
+  linux: ["0.0.0.0/0"]
+  solaris: ["::/0"]
+
+# Logging
+logging:
+  default-log-format: "[%i] %d - %m"
+  outputs:
+    - console:
+        enabled: yes
+
+outputs:
+  # Fast alert log (human readable)
+  - fast:
+      enabled: yes
+      filename: /var/log/suricata/fast.log
+      append: yes
+
+  # EVE JSON (for SOC / SIEM / Filebeat)
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: /var/log/suricata/eve.json
+      community-id: true
+      xff:
+        enabled: yes
+        mode: extra-data
+      types:
+        - alert
+        - dns
+        - http
+        - tls
+        - ssh
+        - flow
+        - anomaly
+        - drop
+
+  # HTTP log (optional but useful)
+  - http-log:
+      enabled: yes
+      filename: /var/log/suricata/http.log
+
+  # DNS log
+  - dns-log:
+      enabled: yes
+      filename: /var/log/suricata/dns.log
+
+  # TLS log
+  - tls-log:
+      enabled: yes
+      filename: /var/log/suricata/tls.log
+
+# Reputation files
+# reputation-categories-file: /etc/suricata/iprep/categories.txt
+# default-reputation-path: /etc/suricata/iprep
+# reputation-files:
+#   - iprep.list
+
+# Rule management
+rule-management:
+  autofp: true
+  default-rule-state: enabled
+  checksum-validation: no
+
+classification-file: /etc/suricata/classification.config
+reference-config-file: /etc/suricata/reference.config
+
+# Stream and detection settings
+stream:
+  memcap: 64mb
+  checksum-validation: no
+  prealloc-sessions: 65536
+
+detect:
+  profile: medium
+  custom-values:
+    toclient-groups: 3
+    toserver-groups: 25
+  sgh-mpm-context: auto
+  inspection-recursion-limit: 3000
+
+# Application layer protocols
+app-layer:
+  protocols:
+    tls:
+      enabled: yes
+      detection-ports:
+        dp: 443
+    http:
+      enabled: yes
+    ssh:
+      enabled: yes
+    smtp:
+      enabled: yes
+    imap:
+      enabled: detection-only
+    smb:
+      enabled: detection-only
+      detection-ports:
+        dp: 445
+    dns:
+      enabled: yes
+      detection-ports:
+        dp: 53
+    ike:
+      enabled: yes
+    ftp:
+      enabled: no
+    dhcp:
+      enabled: yes
+    snmp:
+      enabled: yes
+    rfb:
+      enabled: yes
+    rdp:
+      enabled: yes
+
+# Threading
+threading:
+  set-cpu-affinity: no
+  detect-thread-ratio: 1.0
+
+# Profiling
+profiling:
+  rules:
+    enabled: yes
+    filename: rule_perf.log
+    append: yes
+
+# Advanced settings
+pcre:
+  match-limit: 3500
+  match-limit-recursion: 1500
+
+# Lua scripting
+lua:
+  scripts: /etc/suricata/lua-output.lua
+
+# Magic file
+magic-file: /usr/share/file/magic.mgc

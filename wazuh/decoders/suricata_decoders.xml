@@ -1,0 +1,17 @@
+<decoders>
+
+  <decoder name="suricata-alert">
+    <prematch>"event_type":"alert"</prematch>
+    <json type="json">
+      <field name="src_ip">src_ip</field>
+      <field name="dest_ip">dest_ip</field>
+      <field name="src_port">src_port</field>
+      <field name="dest_port">dest_port</field>
+      <field name="signature">alert.signature</field>
+      <field name="severity">alert.severity</field>
+      <field name="category">alert.category</field>
+      <field name="protocol">proto</field>
+    </json>
+  </decoder>
+
+</decoders>

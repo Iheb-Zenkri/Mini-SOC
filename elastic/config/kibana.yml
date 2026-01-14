@@ -1,0 +1,8 @@
+elasticsearch.hosts: ["http://elasticsearch:9200"]
+elasticsearch.username: "elastic"
+elasticsearch.password: "YourStrongPassword123"
+
+xpack.security.encryptionKey: "some-random-32-char-string"
+xpack.encryptedSavedObjects.encryptionKey: "another-32-char-random-string"
+xpack.reporting.encryptionKey: "another-32-char-random-string"
+xpack.security.enabled: false

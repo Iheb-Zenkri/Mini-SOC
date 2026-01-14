@@ -1,0 +1,176 @@
+############################
+# NETWORKS
+############################
+networks:
+  soc_net:
+    driver: bridge
+
+############################
+# VOLUMES
+############################
+volumes:
+  suricata_logs:
+  wazuh_api_configuration:
+  wazuh_etc:
+  wazuh_logs:
+  wazuh_queue:
+  wazuh_var_multigroups:
+  wazuh_integrations:
+  wazuh_active_response:
+  wazuh_agentless:
+  wazuh_wodles:
+  elastic_data:
+
+############################
+# SERVICES
+############################
+
+services:
+
+  ##########################
+  # SURICATA (NIDS)
+  ##########################
+  suricata:
+    build: ./suricata
+    container_name: suricata-nids
+    network_mode: host
+    restart: unless-stopped
+
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+
+    volumes:
+      - suricata_logs:/var/log/suricata
+      - ./suricata/config/suricata.yaml:/etc/suricata/suricata.yaml.tpl:ro
+      - ./suricata/config/rules:/etc/suricata/rules:rw
+
+    environment:
+      SURICATA_INTERFACE: eth0
+      HOME_NET: 192.168.1.0/24
+      UPDATE_RULES: "true"
+      SURICATA_OPTIONS: "-v"
+
+    healthcheck:
+      test: ["CMD-SHELL", "suricata -T -c /etc/suricata/suricata.yaml >/dev/null 2>&1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+
+  ##########################
+  # FILEBEAT (IDS LOG SHIPPER)
+  ##########################
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.11.3
+    container_name: soc-filebeat
+    restart: unless-stopped
+
+    depends_on:
+      suricata:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_started
+
+    networks:
+      - soc_net
+
+    volumes:
+      - suricata_logs:/var/log/suricata:ro
+      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+
+    command: ["filebeat", "-e", "-strict.perms=false"]
+
+
+  ##########################
+  # WAZUH MANAGER (SIEM)
+  ##########################
+  wazuh-manager:
+    build: ./wazuh
+    container_name: wazuh-manager
+    hostname: wazuh-manager
+    restart: unless-stopped
+
+    ports:
+      - "1514:1514/udp"
+      - "1515:1515/tcp"
+      - "55000:55000/tcp"
+
+    networks:
+      - soc_net
+
+    volumes:
+      - wazuh_api_configuration:/var/ossec/api/configuration
+      - wazuh_etc:/var/ossec/etc
+      - wazuh_logs:/var/ossec/logs
+      - wazuh_queue:/var/ossec/queue
+      - wazuh_var_multigroups:/var/ossec/var/multigroups
+      - wazuh_integrations:/var/ossec/integrations
+      - wazuh_active_response:/var/ossec/active-response/bin
+      - wazuh_agentless:/var/ossec/agentless
+      - wazuh_wodles:/var/ossec/wodles
+      - suricata_logs:/var/ossec/logs/suricata:ro
+
+    environment:
+      FILEBEAT_SSL_VERIFICATION_MODE: none
+      INDEXER_URL: http://elasticsearch:9200
+      INDEXER_USERNAME: elastic
+      INDEXER_PASSWORD: YourStrongPassword123
+
+    depends_on:
+      elasticsearch:
+        condition: service_started
+
+    healthcheck:
+      test: ["CMD-SHELL", "/var/ossec/bin/ossec-control status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+
+  ##########################
+  # ELASTICSEARCH
+  ##########################
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.3
+    container_name: soc-elasticsearch
+    restart: unless-stopped
+
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: false
+      ELASTIC_PASSWORD: YourStrongPassword123
+      ES_JAVA_OPTS: "-Xms1g -Xmx1g"
+
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data
+      - ./elastic/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
+
+    ports:
+      - "9200:9200"
+
+    networks:
+      - soc_net
+
+
+  ##########################
+  # KIBANA
+  ##########################
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.3
+    container_name: soc-kibana
+    restart: unless-stopped
+
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      xpack.security.enabled: "false"
+
+    ports:
+      - "5601:5601"
+
+    networks:
+      - soc_net
+
+    depends_on:
+      elasticsearch:
+        condition: service_started

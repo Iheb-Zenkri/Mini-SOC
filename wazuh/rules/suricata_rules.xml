@@ -1,0 +1,17 @@
+<group name="suricata,ids">
+
+  <rule id="100100" level="8">
+    <if_matched_sid>suricata-alert</if_matched_sid>
+    <description>Suricata IDS Alert: $(signature)</description>
+    <mitre>T1046</mitre>
+    <options>no_full_log</options>
+  </rule>
+
+  <rule id="100101" level="12">
+    <if_matched_sid>suricata-alert</if_matched_sid>
+    <field name="severity">[3-5]</field>
+    <description>High severity Suricata attack detected</description>
+    <mitre>T1059</mitre>
+  </rule>
+
+</group>

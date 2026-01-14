@@ -1,0 +1,132 @@
+<ossec_config>
+
+  <!-- =========================
+       GLOBAL SETTINGS
+       ========================= -->
+  <global>
+    <jsonout_output>yes</jsonout_output>
+    <alerts_log>yes</alerts_log>
+    <logall>no</logall>
+    <logall_json>no</logall_json>
+  </global>
+
+
+  <!-- =========================
+       ALERT LEVELS
+       ========================= -->
+  <alerts>
+    <log_alert_level>3</log_alert_level>
+    <email_alert_level>12</email_alert_level>
+  </alerts>
+
+
+  <!-- =========================
+       REMOTE AGENTS
+       ========================= -->
+  <remote>
+    <connection>secure</connection>
+    <port>1514</port>
+    <protocol>udp</protocol>
+    <queue_size>131072</queue_size>
+  </remote>
+
+
+  <!-- =========================
+       AUTHD (AGENT REGISTRATION)
+       ========================= -->
+  <auth>
+    <disabled>no</disabled>
+    <port>1515</port>
+    <use_password>no</use_password>
+    <force_insert>yes</force_insert>
+    <purge>yes</purge>
+  </auth>
+
+
+  <!-- =========================
+       FILE INTEGRITY MONITORING
+       ========================= -->
+  <syscheck>
+    <disabled>no</disabled>
+    <frequency>43200</frequency>
+    <scan_on_start>yes</scan_on_start>
+
+    <directories check_all="yes">/etc,/usr/bin,/usr/sbin</directories>
+    <ignore>/etc/mtab</ignore>
+    <ignore>/etc/hosts.deny</ignore>
+  </syscheck>
+
+
+  <!-- =========================
+       ROOTCHECK
+       ========================= -->
+  <rootcheck>
+    <disabled>no</disabled>
+  </rootcheck>
+
+
+  <!-- =========================
+       LOG COLLECTION (LOCAL)
+       ========================= -->
+  <localfile>
+    <log_format>syslog</log_format>
+    <location>/var/log/syslog</location>
+  </localfile>
+
+
+  <!-- =========================
+       SURICATA IDS INGESTION
+       ========================= -->
+  <include>/var/ossec/etc/ossec-suricata.conf</include>
+
+
+  <!-- =========================
+       ACTIVE RESPONSE
+       ========================= -->
+  <active-response>
+    <disabled>no</disabled>
+    <ca_store>/var/ossec/etc/wpk_root.pem</ca_store>
+    <verify_agent_cert>yes</verify_agent_cert>
+  </active-response>
+
+
+  <!-- =========================
+       RULES & DECODERS
+       ========================= -->
+  <ruleset>
+    <decoder_dir>ruleset/decoders</decoder_dir>
+    <rule_dir>ruleset/rules</rule_dir>
+
+    <!-- Custom SOC content -->
+    <decoder_dir>/var/ossec/etc/decoders</decoder_dir>
+    <rule_dir>/var/ossec/etc/rules</rule_dir>
+  </ruleset>
+
+
+  <!-- =========================
+       INTERNAL MONITORING
+       ========================= -->
+  <wodle name="wazuh-monitor">
+    <disabled>no</disabled>
+    <interval>1h</interval>
+  </wodle>
+
+
+  <!-- =========================
+       API
+       ========================= -->
+  <api>
+    <enabled>yes</enabled>
+    <port>55000</port>
+    <https>no</https>
+  </api>
+
+
+  <!-- =========================
+       LOGGING
+       ========================= -->
+  <logging>
+    <log_format>plain</log_format>
+  </logging>
+
+</ossec_config>

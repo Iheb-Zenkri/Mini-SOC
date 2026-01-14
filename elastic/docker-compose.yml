@@ -22,8 +22,7 @@ services:
     container_name: kibana
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-      - ELASTICSEARCH_USERNAME=elastic
-      - ELASTICSEARCH_PASSWORD=YourStrongPassword123
+      - xpack.security.enabled=true
     volumes:
       - ./configs/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
     ports:
